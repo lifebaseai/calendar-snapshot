@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Calendar</title>
+  <link rel="icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css?v=mwquqba1">
+</head>
+<body>
+  <p id="snap-wait" style="font:16px -apple-system,system-ui,sans-serif;padding:24px">Opening the saved calendar…</p>
+  <script>
+  (async () => {
+    const m = location.hash.match(/k=([A-Za-z0-9_-]{43})/);
+    let k = m && m[1];
+    try { if (k) localStorage.setItem('snap-key-4dba95217c4a66cf3e', k); else k = localStorage.getItem('snap-key-4dba95217c4a66cf3e'); } catch {}
+    if (!k) throw new Error('the link is missing its key');
+    const raw = Uint8Array.from(atob(k.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0));
+    const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+    const res = await fetch('data.bin?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('GitHub answered ' + res.status);
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+    const p = JSON.parse(new TextDecoder().decode(plain));
+    if (m) history.replaceState(null, '', location.pathname + location.search + '#day');
+    document.title = p.title;
+    document.body.innerHTML = p.body;
+    window.SNAP = p.snap;
+    const s = document.createElement('script');
+    s.textContent = p.app;
+    document.body.appendChild(s);
+  })().catch(e => { const w = document.getElementById('snap-wait'); if (w) w.textContent = 'Could not open this saved copy: ' + e.message; });
+  </script>
+</body>
+</html>
